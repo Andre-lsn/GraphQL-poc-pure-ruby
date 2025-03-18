@@ -13,7 +13,9 @@ module Application
       end
 
       def call
-        response = client.execute(query, { name:, page:, status: })
+        validate_input!
+
+        response = fetch_characters
         data = response['data']['characters']
         {
           characters: data['results'],
@@ -22,6 +24,19 @@ module Application
       end
 
       private
+
+      def validate_input!
+        raise ArgumentError, 'Character name cannot be nil or empty' if name.strip.empty?
+        raise ArgumentError, 'Page number must be positive' if page.to_i <= 0
+      end
+
+      def fetch_characters
+        client.execute(query, { name:, page:, status: })
+      rescue Faraday::ConnectionFailed => e
+        raise "Network error: #{e.message}"
+      rescue StandardError => e
+        raise "Unexpected API error: #{e.message}"
+      end
 
       def query
         <<~GRAPHQL
